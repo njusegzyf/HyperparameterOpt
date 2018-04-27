@@ -10,11 +10,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# import tempfile
+import tempfile
 
 import tensorflow as tf
-
-from dataset.mnist import get_mnist_dataset
 
 
 def deepnn(x, units):
@@ -63,8 +61,7 @@ def deepnn(x, units):
         h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 64])
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
-    # Dropout - controls the complexity of the model, prevents co-adaptation of
-    # features.
+    # Dropout - controls the complexity of the model, prevents co-adaptation of features.
     with tf.name_scope('dropout'):
         keep_prob = tf.placeholder(tf.float32)
         h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
@@ -101,7 +98,7 @@ def bias_variable(shape):
     return tf.Variable(initial)
 
 
-def run_with_specified_units(mnist, units):
+def run_with_specified_args(mnist, units=1024, learning_rate=1e-4, isLogToFile=False):
     # Create the model
     x = tf.placeholder(tf.float32, [None, 784])
 
@@ -116,40 +113,29 @@ def run_with_specified_units(mnist, units):
     cross_entropy = tf.reduce_mean(cross_entropy)
 
     with tf.name_scope('adam_optimizer'):
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+        train_step = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
 
     with tf.name_scope('accuracy'):
         correct_prediction = tf.equal(tf.argmax(y_conv, 1), y_)
         correct_prediction = tf.cast(correct_prediction, tf.float32)
     accuracy = tf.reduce_mean(correct_prediction)
 
-    # graph_location = tempfile.mkdtemp()
-    # print('Saving graph to: %s' % graph_location)
-    # train_writer = tf.summary.FileWriter(graph_location)
-    # train_writer.add_graph(tf.get_default_graph())
+    if isLogToFile:
+        graph_location = tempfile.mkdtemp()
+        print('Saving graph to: %s' % graph_location)
+        train_writer = tf.summary.FileWriter(graph_location)
+        train_writer.add_graph(tf.get_default_graph())
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         for i in range(2000):
             batch = mnist.train.next_batch(50)
             if i % 100 == 0:
-                train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1], keep_prob: 1.0})
+                train_accuracy = sess.run(accuracy, feed_dict={x: batch[0], y_: batch[1], keep_prob: 1.0})
+                # train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1], keep_prob: 1.0}, session=sess)
                 print('step %d, training accuracy %g' % (i, train_accuracy))
             train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
 
-        print('test accuracy %g' % accuracy.eval(feed_dict={
-            x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
-
-
-def main(_):
-    # Import data
-    mnist = get_mnist_dataset()
-
-    for units in [200, 400, 600, 800, 1000, 1200, 1400, 1600]:
-        print('-' * 80)
-        print('\n units {0} \n'.format(units))
-        run_with_specified_units(mnist, units)
-
-
-if __name__ == '__main__':
-    tf.app.run(main=main)
+        test_accuracy = sess.run(accuracy, feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+        # accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+        print('test accuracy %g' % test_accuracy)
