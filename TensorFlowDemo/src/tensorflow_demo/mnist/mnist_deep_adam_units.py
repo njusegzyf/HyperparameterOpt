@@ -14,17 +14,17 @@ import tensorflow as tf
 
 from dataset.mnist import get_mnist_dataset
 
-from tensorflow_demo.mnist_deep_adam import run_with_specified_args
+from tensorflow_demo.mnist.mnist_deep_adam import run_with_specified_args
 
 
 def main(_):
     # Import data
     mnist = get_mnist_dataset()
 
-    for learning_rate in [0.01, 0.005, 0.0025, 0.001, 0.0005, 0.00025, 0.0001]:
+    for units in range(1800, 2401, 100):  # range(200, 1601, 100):
         print('-' * 80)
-        print('\n learning_rate {0} \n'.format(learning_rate))
-        run_with_specified_args(mnist, learning_rate=learning_rate, isLogToFile=False)
+        print('\n units {0} \n'.format(units))
+        run_with_specified_args(mnist, units=units, is_log_to_file=False)
 
 
 if __name__ == '__main__':
